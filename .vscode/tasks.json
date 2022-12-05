@@ -3,7 +3,7 @@
 	"tasks": [
 		{
 			"type": "shell",
-			"command": "cd $(dirname ${fileDirname}); cargo run",
+			"command": "cd $(dirname ${fileDirname}); cargo run -q",
 			"problemMatcher": [
 				"$rustc"
 			],
