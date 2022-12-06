@@ -1,25 +1,17 @@
+mod duel;
 mod shapes;
-
-use shapes::{Shape, DuelResult};
-use std::error::Error;
-use std::slice::Windows;
-use std::str::FromStr;
-
-
-
-
+use duel::{assert, read_duels_from_file};
 
 fn main() {
-    shapes::assert();
-    let r = Shape::Paper.duel(Shape::Rock);
-    println!("{}", r.points())
+    assert();
 
-}
-
-fn duel(a: Shape, b:Shape) {
-    match a.duel(b) {
-        DuelResult::Win(v) => println!("{a} wins against {b}, +{v} points"),
-        DuelResult::Lose(v) => println!("{a} loses against {b}, +{v} points"),
-        DuelResult::Draw(v) => println!("{a} draws against {b}, +{v} points"),
+    let duels = read_duels_from_file("input2.txt").unwrap();
+    let mut my_score: u32 = 0;
+    for d in duels {
+        let d = d.unwrap();
+        let dr = d.result().points() as u32;
+        my_score += dr;
     }
+
+    println!("The result is: {}", my_score);
 }
