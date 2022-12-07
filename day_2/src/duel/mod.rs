@@ -5,7 +5,7 @@ use std::path::Path;
 use std::fmt;
 use std::str::FromStr;
 
-use super::super::shapes::Shape;
+use super::shapes::Shape;
 
 #[derive(Debug)]
 pub struct DuelParseError;
@@ -16,8 +16,8 @@ impl fmt::Display for DuelParseError {
 }
 
 pub struct Duel {
-    me: Shape,
-    opponent: Shape,
+    pub me: Shape,
+    pub opponent: Shape,
 }
 
 impl Duel {
@@ -76,6 +76,7 @@ impl std::str::FromStr for Duel {
 }
 
 #[derive(Debug)]
+#[derive(PartialEq)]
 pub enum DuelResult {
     Win(u8),
     Lose(u8),
@@ -93,74 +94,63 @@ impl DuelResult {
     }
 }
 
-pub fn assert() {
-    match Duel::new(Shape::Rock, Shape::Paper).result() {
-        DuelResult::Lose(1) => (), //println!("Rock vs. Paper: ✅"),
-        _ => {
-            println!("Rock vs. Paper: ❌");
-            panic!()
-        }
+#[derive(Debug)]
+pub struct DuelResultParseError;
+impl fmt::Display for DuelResultParseError {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        write!(f, "cannot parse DuelResult")
     }
+}
 
-    match Duel::new(Shape::Rock, Shape::Rock).result() {
-        DuelResult::Draw(4) => (), //println!("Rock vs. Rock: ✅"),
-        _ => {
-            println!("Rock vs. Rock: ❌");
-            panic!()
-        }
+fn winning_shape(s: Shape) -> Shape {
+    match s {
+        Shape::Rock => Shape::Paper,
+        Shape::Paper => Shape::Scissor,
+        Shape::Scissor => Shape::Rock,
     }
-    match Duel::new(Shape::Rock, Shape::Scissor).result() {
-        DuelResult::Win(7) => (), //println!("Rock vs. Scissor: ✅"),
-        _ => {
-            println!("Rock vs. Scissor: ❌");
-            panic!()
-        }
-    }
+}
 
-    match Duel::new(Shape::Paper, Shape::Rock).result() {
-        DuelResult::Win(8) => (), //println!("Paper vs. Rock: ✅"),
-        _ => {
-            println!("Paper vs. Rock: ❌");
-            panic!()
-        }
+fn losing_shape(s: Shape) -> Shape {
+    match s {
+        Shape::Rock => Shape::Scissor,
+        Shape::Paper => Shape::Rock,
+        Shape::Scissor => Shape::Paper,
     }
-    match Duel::new(Shape::Paper, Shape::Paper).result() {
-        DuelResult::Draw(5) => (), //println!("Paper vs. Rock: ✅"),
-        _ => {
-            println!("Paper vs. Rock: ❌");
-            panic!()
-        }
-    }
-    match Duel::new(Shape::Paper, Shape::Scissor).result() {
-        DuelResult::Lose(2) => (), //println!("Paper vs. Scissor: ✅"),
-        _ => {
-            println!("Paper vs. Scissor: ❌");
-            panic!()
-        }
-    }
+}
 
-    match Duel::new(Shape::Scissor, Shape::Rock).result() {
-        DuelResult::Lose(3) => (), //println!("Scissor vs. Rock: ✅"),
-        _ => {
-            println!("Scissor vs. Rock: ❌");
-            panic!()
-        }
-    }
-    match Duel::new(Shape::Scissor, Shape::Paper).result() {
-        DuelResult::Win(9) => (), //println!("Scissor vs. Paper: ✅"),
-        _ => {
-            println!("Scissor vs. Paper: ❌");
-            panic!()
-        }
-    }
-    match Duel::new(Shape::Scissor, Shape::Scissor).result() {
-        DuelResult::Draw(6) => (), //println!("Scissor vs. Scissor: ✅"),
-        _ => {
-            println!("Scissor vs. Scissor: ❌");
-            panic!()
+impl std::str::FromStr for DuelResult {
+    type Err = DuelResultParseError;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let mut token_iter = s.trim().split_whitespace();
+        let tokens = (token_iter.next(), token_iter.next());
+
+        match tokens {
+            (Some(opponent_s), Some(outcome_s)) => {
+                let Ok(opponent_shape) = Shape::from_str(opponent_s) else {
+                    return Err(DuelResultParseError)
+                };
+
+                match outcome_s.to_uppercase().as_str() {
+                    "X" => {
+                        return Ok(DuelResult::Lose(
+                            _DUEL_LOSE + losing_shape(opponent_shape) as u8,
+                        ))
+                    }
+                    "Y" => return Ok(DuelResult::Draw(_DUEL_DRAW + opponent_shape as u8)),
+                    "Z" => {
+                        return Ok(DuelResult::Win(
+                            _DUEL_WIN + winning_shape(opponent_shape) as u8,
+                        ))
+                    }
+                    _ => return Err(DuelResultParseError),
+                };
+            }
+            _ => Err(DuelResultParseError),
         }
     }
 }
+
 
 pub fn read_duels_from_file<P>(
     filename: P,
@@ -171,6 +161,21 @@ where
     let file = File::open(filename)?;
     let lines = io::BufReader::new(file).lines();
     let mapped = lines.map(|lr| -> Result<Duel, DuelParseError> { Duel::from_str(&lr.unwrap()) });
+
+    io::Result::Ok(mapped)
+}
+
+pub fn read_duelresults_from_file<P>(
+    filename: P,
+) -> io::Result<impl Iterator<Item = Result<DuelResult, DuelResultParseError>>>
+where
+    P: AsRef<Path>,
+{
+    let file = File::open(filename)?;
+    let lines = io::BufReader::new(file).lines();
+    let mapped = lines.map(|lr| -> Result<DuelResult, DuelResultParseError> {
+        DuelResult::from_str(&lr.unwrap())
+    });
 
     io::Result::Ok(mapped)
 }
